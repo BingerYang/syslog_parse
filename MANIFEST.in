@@ -1,0 +1,13 @@
+include LICENSE
+include MAINTAINERS
+include README.rst
+include requirements.txt
+
+recursive-include tests *
+recursive-include examples *
+recursive-include build *
+recursive-exclude .gitignore
+recursive-exclude * __pycache__
+recursive-exclude dict
+recursive-exclude venv
+recursive-exclude * *.pyc
