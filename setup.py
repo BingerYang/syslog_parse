@@ -15,7 +15,10 @@ with open(fname) as f:
 with open("MAINTAINERS") as f:
     lines = [l.strip() for l in f.readlines()]
     author, author_email = lines[0].split(sep=" ")
-    maintainer, maintainer_email = lines[1].split(sep=" ")
+    if len(lines) > 1:
+        maintainer, maintainer_email = lines[1].split(sep=" ")
+    else:
+        maintainer, maintainer_email = author, author_email
 
 root = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
 setup(
@@ -29,7 +32,7 @@ setup(
     maintainer=maintainer,
     maintainer_email=maintainer_email,
     license=open('LICENSE').read(),
-    url='git@github.com:BingerYang/{}.git'.format(root),
+    url='https://github.com/BingerYang/{}'.format(root),
 
     python_requires='>=3.4',
     packages=find_packages(exclude=['examples', 'tests']),
