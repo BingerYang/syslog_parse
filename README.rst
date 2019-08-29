@@ -1,5 +1,5 @@
-syslog_parse
--------------
+**syslog_parse**
+----------------
 
 
 Documentation
@@ -14,6 +14,7 @@ syslog_parse requires **Python **Python 3.x >= 3.4**.
 
 Install from PyPI::
     $ pip install syslog_parse
+
 Usage
 -----
 
