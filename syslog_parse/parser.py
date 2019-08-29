@@ -18,41 +18,13 @@ import re
 MAX_MESSAGE_LENGTH = 1024
 
 
-def parse_cycle(data, parse=None, is_parse_all=True):
-    if is_parse_all:
-        parse = parse or Parser.parse
-    pat = re.compile("(?P<pri><\d+>)(?P<other>.+)")
-    pri_part = None
-    while True:
-
-        if not data:
-            raise StopIteration
-        res = re.search(pat, data)
-        if res:
-            if pri_part:
-                if parse:
-                    yield parse(data[:res.start("pri")], pri_part)
-                else:
-                    yield data[:res.start("pri")], pri_part
-            pri_part = res.group("pri")
-            data = res.group("other")
-        else:
-            if pri_part:
-                if parse:
-                    yield parse(data, pri_part)
-                else:
-                    yield data, pri_part
-                pri_part = None
-                data = None
-
-
 class Parser(object):
     """Parse syslog messages."""
     _DATA_TIME_FORMAT = [
         "%b %d %Y %H:%M:%S",
         "%b %d %H:%M:%S"
     ]
-    _DATA_FORMAT_PAT = "<(?P<pri>\d+)>"
+    _DATA_FORMAT_PAT = "(?P<pri><\d+>)(?P<other>.+)"
     # _DATA_TIME_FORMAT_PAT_LIST = [
     #     "(?P<mon>[A-Za-z]+)\s+(?P<day>\d+)\s+(?P<year>\d+)\s+(?P<time>([0-9]{2}:){2}\d+)",
     #     "(?P<mon>[A-Za-z]+)\s+(?P<day>\d+)\s+(?P<time>([0-9]{2}:){2}\d+)"
@@ -61,41 +33,79 @@ class Parser(object):
         "(?P<temptime>[A-Za-z]+\s+\d+\s+\d+\s+([0-9]{2}:){2}\d+)[\.\d]*",
         "(?P<temptime>[A-Za-z]+\s+\d+\s+([0-9]{2}:){2}\d+)[\.\d]*"
     ]
+    rule = re.compile(_DATA_FORMAT_PAT)
 
     @classmethod
     def when_parse_prival(cls, prival):
         pass
 
     @classmethod
-    def parse(cls, data, pri=None):
-        parser = cls(data, pri)
+    def parse(cls, data, priority=None):
+        """
+        data 和 priority 均为解析的数据，如果priority存在，则 data 中开头不包含priority信息，否则包含
+        :param data:
+        :param priority:
+        :return:
+        """
+        obj = cls(data)
+        if priority:
+            obj._pri_part = priority
+            priority_value = obj._parse_pri_part()
+        else:
+            priority_value = obj.parse_priority()
 
-        priority_value = parser._parse_pri_part()
         cls.when_parse_prival(priority_value)
-        timestamp, hostname = parser._parse_header_part()
-        module, digest = parser._parse_event()
-        content = parser._parse_msg_part()
-
+        timestamp, hostname = obj._parse_header_part()
+        module, digest = obj._parse_event()
+        content = obj._parse_msg_part()
         return Message(priority_value.facility, priority_value.severity,
                        timestamp, hostname, module=module, digest=digest, content=content)
 
-    def _parse_pri_part(self):
-        return PriorityValue.from_pri_part(self._pri_part)
+    @classmethod
+    def cycle_parse(cls, data):
+        """
+        循环解析 data 数据
+        :param data:
+        :return:
+        """
+        find_pri_part = None
+        while True:
 
-    def __init__(self, data, pri=None):
+            if not data:
+                break
+
+            res = re.search(cls.rule, data)
+            if res:
+                if find_pri_part:
+                    yield cls.parse(data[:res.start("pri")], priority=find_pri_part)
+
+                find_pri_part = res.group("pri")
+                data = res.group("other")
+            else:
+                if find_pri_part:
+                    yield cls.parse(data, find_pri_part)
+                    find_pri_part = None
+                    data = None
+
+    def __init__(self, data):
         ensure(isinstance(data, str), 'Data must be a byte string.')
         ensure(len(data) <= MAX_MESSAGE_LENGTH,
                'Message must not be longer than 1024 bytes.')
-        if pri:
-            self._pri_part = pri
-            self._data = data
+        self._data = data
+
+    def parse_priority(self):
+        pat = re.compile(self._DATA_FORMAT_PAT)
+        res = re.search(pat, self._data)
+        if res:
+            self._pri_part = res.group("pri")
+            pri_obj = self._parse_pri_part()
+            self._data = self._data[res.end("pri"):]
         else:
-            pat = re.compile(self._DATA_FORMAT_PAT)
-            res = re.search(pat, data)
-            if res:
-                self._pri_part = res.group("pri")
-            else:
-                self._data = data[:res.start("pri")]
+            raise MessageFormatError("Can't match priority")
+        return pri_obj
+
+    def _parse_pri_part(self):
+        return PriorityValue.from_pri_part(self._pri_part)
 
     def _parse_header_part(self):
         """Extract timestamp and hostname from the HEADER part."""
@@ -184,6 +194,7 @@ class ParseEvent(object):
 
 
 class PriorityValue(namedtuple('PriorityValue', 'facility severity')):
+    _DATA_FORMAT_PAT = "<(?P<pri>\d+)>"
 
     @classmethod
     def from_pri_part(cls, pri_part):
