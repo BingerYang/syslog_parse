@@ -26,8 +26,8 @@ setup(
     version=__version__,
     description=__description__,
 
-    long_description=open('README.md').read(),
-    long_description_content_type="text/markdown",
+    long_description=open('README.rst', encoding='utf-8').read(),
+    long_description_content_type="text/x-rst",
     author=author,
     author_email=author_email,
     maintainer=maintainer,

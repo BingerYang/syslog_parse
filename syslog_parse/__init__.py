@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 name = "syslog_parse"
-version_info = (0, 2, 0, 1908271656)
+version_info = (0, 2, 0, 1908301156)
 __version__ = ".".join([str(v) for v in version_info])
-__description__ = u'syslog解析工具'
+__description__ = 'syslog parser'
 
 from .facility import Facility
 from .message import Message
