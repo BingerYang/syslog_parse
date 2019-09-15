@@ -14,6 +14,7 @@ from .facility import Facility
 from .message import Message
 from .severity import Severity
 import re
+from copy import copy
 
 MAX_MESSAGE_LENGTH = 1024
 
@@ -103,6 +104,13 @@ class Parser(object):
         info["facility"] = info["facility"].value
         info["severity"] = info["severity"].value
         return info
+
+    @staticmethod
+    def to_list(msg):
+        resp = list(copy(msg()))
+        resp[0] = resp[0].value
+        resp[1] = resp[1].value
+        return resp
 
     def parse_priority(self):
         pat = re.compile(self._DATA_FORMAT_PAT)
