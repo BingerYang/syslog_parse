@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 name = "syslog_parse"
-version_info = (0, 2, 0, 1908301156)
+version_info = (0, 2, 1, 1909162205)
 __version__ = ".".join([str(v) for v in version_info])
 __description__ = 'syslog parser'
 

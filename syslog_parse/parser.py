@@ -93,6 +93,17 @@ class Parser(object):
                'Message must not be longer than 1024 bytes.')
         self._data = data
 
+    @staticmethod
+    def to_dict(msg):
+        return dict(msg._asdict())
+
+    @classmethod
+    def to_json(cls, msg):
+        info = cls.to_dict(msg)
+        info["facility"] = info["facility"].value
+        info["severity"] = info["severity"].value
+        return info
+
     def parse_priority(self):
         pat = re.compile(self._DATA_FORMAT_PAT)
         res = re.search(pat, self._data)
