@@ -83,7 +83,7 @@ class Parser(object):
             try:
                 obj = cls.parse(data, priority)
             except MessageFormatError as e:
-                error_record = "{}{}".format(property, data)
+                error_record = "{}{}".format(priority, data)
                 if ignore_error:
                     collect_traceback_cb(error_record, e, traceback_cb)
                     obj = None
