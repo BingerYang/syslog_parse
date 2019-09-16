@@ -19,6 +19,13 @@ from copy import copy
 MAX_MESSAGE_LENGTH = 1024
 
 
+def collect_traceback_cb(msg, e, traceback_cb=None):
+    try:
+        return traceback_cb(msg, e)
+    except Exception as e:
+        return None
+
+
 class Parser(object):
     """Parse syslog messages."""
     _DATA_TIME_FORMAT = [
@@ -63,12 +70,27 @@ class Parser(object):
                        timestamp, hostname, module=module, digest=digest, content=content)
 
     @classmethod
-    def cycle_parse(cls, data):
+    def cycle_parse(cls, data, traceback_cb=None, ignore_error=False):
         """
         循环解析 data 数据
         :param data:
+        :param traceback_cb: 异常处理回调
+        :param ignore_error: 默认不忽略异常
         :return:
         """
+
+        def run_parse(data, priority):
+            try:
+                obj = cls.parse(data, priority)
+            except MessageFormatError as e:
+                error_record = "{}{}".format(property, data)
+                if ignore_error:
+                    collect_traceback_cb(error_record, e, traceback_cb)
+                    obj = None
+                else:
+                    raise
+            return obj
+
         find_pri_part = None
         while True:
 
@@ -78,13 +100,13 @@ class Parser(object):
             res = re.search(cls.rule, data)
             if res:
                 if find_pri_part:
-                    yield cls.parse(data[:res.start("pri")], priority=find_pri_part)
+                    yield run_parse(data[:res.start("pri")], priority=find_pri_part)
 
                 find_pri_part = res.group("pri")
                 data = res.group("other")
             else:
                 if find_pri_part:
-                    yield cls.parse(data, find_pri_part)
+                    yield run_parse(data, find_pri_part)
                     find_pri_part = None
                     data = None
 
